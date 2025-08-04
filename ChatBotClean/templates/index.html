@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Genc Sohbet</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chatbox {
+      width: 500px;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+
+    .chatbox h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #soru {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    #cevap {
+      margin-top: 20px;
+      min-height: 60px;
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+    }
+
+    #loading {
+      font-style: italic;
+      color: gray;
+      display: none;
+    }
+
+    #feedback {
+      margin-top: 10px;
+      display: none;
+    }
+
+    #feedback button {
+      width: auto;
+      margin-right: 10px;
+      padding: 5px 10px;
+    }
+
+    #feedback span {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chatbox">
+    <h2>Genc Sohbet</h2>
+    <input type="text" id="soru" placeholder="Soru yazın..." />
+    <button onclick="soruSor()">Gönder</button>
+    <p id="loading">Chatbot yazıyor...</p>
+    <div id="cevap"></div>
+
+    <div id="feedback">
+      <span>Bu cevabı faydalı buldunuz mu?</span>
+      <button onclick="feedbackGonder(true)">👍</button>
+      <button onclick="feedbackGonder(false)">👎</button>
+    </div>
+  </div>
+
+  <script>
+    function linkleriAktifEt(text) {
+      return text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+    }
+    let globalDistance = null; 
+    async function soruSor() {
+      const soru = document.getElementById("soru").value;
+      const cevapDiv = document.getElementById("cevap");
+      const loading = document.getElementById("loading");
+      const feedbackDiv = document.getElementById("feedback");
+
+      if (!soru.trim()) {
+        cevapDiv.innerText = "Lütfen bir soru girin.";
+        return;
+      }
+      feedbackDiv.style.display = "none";
+      feedbackDiv.innerHTML = `
+      Bu cevabı faydalı buldunuz mu?"</span>
+      <button onclick="feedbackGonder(true)">👍</button>
+      <button onclick="feedbackGonder(false)">👎</button>`;
+
+      loading.style.display = "block";
+      cevapDiv.innerText = "";
+      
+      try {
+        const res = await fetch("/api/cevap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ soru })
+        });
+
+        const data = await res.json();
+        cevapDiv.innerHTML = linkleriAktifEt(data.cevap);
+        globalDistance = data.distance;
+
+        if (globalDistance <= 0.3) {
+            feedbackDiv.style.display = "block";
+        }
+        
+
+      } catch (err) {
+        cevapDiv.innerText = "Bir hata oluştu.";
+      } finally {
+        loading.style.display = "none";
+      }
+    }
+
+    function feedbackGonder(begendim) {
+      const soru = document.getElementById("soru").value;
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ soru: soru, begeni: begendim })
+      }).then(() => {
+        document.getElementById("feedback").innerHTML = "Teşekkürler!";
+      });
+    }
+  </script>
+
+</body>
+</html>
